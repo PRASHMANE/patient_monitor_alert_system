@@ -1,4 +1,24 @@
+import sys
+import os
+
+# Add project root (two levels up from main.py) to sys.path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+
+
 import streamlit as st
+from pathlib import Path
+from datetime import datetime
+from add_info import add,add_patient,goto,get_all_patients,get_patient_by_id,update_patient,remove_patient
+
+
+
+
+DB_PATH = "patients.db"
+PHOTOS_DIR = Path("data")
+PHOTOS_DIR.mkdir(exist_ok=True)
 
 # --- Page setup ---
 st.set_page_config(page_title="Dark Theme App", layout="wide")
@@ -123,11 +143,8 @@ if st.session_state.page == "home":
     st.write("Welcome to the *complete dark theme* dashboard 🌑✨")
 
 elif st.session_state.page == "addinfo":
-    st.title("📝 Add Info")
-    name = st.text_input("Enter Patient Name")
-    age = st.number_input("Enter Age", min_value=0, max_value=120)
-    if st.button("Save Info"):
-        st.success(f"✅ Info Saved for {name} (Age: {age})")
+    #st.title("📝 Add Info")
+    add()
 
 elif st.session_state.page == "scanner":
     st.title("📷 Scanner")
@@ -136,6 +153,194 @@ elif st.session_state.page == "scanner":
 elif st.session_state.page == "model":
     st.title("🤖 AI/ML Model")
     st.write("This is the *Machine Learning Model* section.")
+
+elif st.session_state.page == "add":
+    st.markdown("""
+<style>
+/* Target Streamlit input labels */
+.stTextInput label, .stTextInput div[data-testid="stMarkdownContainer"] p {
+    color: #00b4d8 !important;
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 15px #00b4d8;
+    letter-spacing: 1px;
+}
+
+/* Input box styling */
+.stTextInput > div > div > input {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid #00b4d8;
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: 0.3s ease;
+}
+
+.stTextInput > div > div > input:focus {
+    border-color: #48cae4;
+    box-shadow: 0 0 15px #48cae4;
+}
+</style>
+""", unsafe_allow_html=True)
+    st.subheader("➕ Add New Patient")
+
+    with st.form("add_form"):
+            name = st.text_input("Patient Name")
+            age = st.text_input("Age")
+            gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+            contact = st.text_input("Contact No.")
+            blood = st.text_input("Blood Group")
+            health = st.text_area("Health Condition")
+            bed = st.text_input("Bed Number")
+            ward = st.text_input("Ward Name")
+            photo = st.file_uploader("Photo (optional)", type=["jpg", "jpeg", "png"])
+
+
+            submitted = st.form_submit_button("Save", use_container_width=True)
+            if submitted:
+                photo_path = None
+                if photo:
+                    ext = Path(photo.name).suffix
+                    #safe_name = f"{roll}_{int(time.time())}{ext}"
+                    safe_name =f"{contact}.png"
+                    out = PHOTOS_DIR / safe_name
+                    with open(out, "wb") as f:
+                        f.write(photo.getbuffer())
+                    photo_path = str(out)
+                add_patient((name, age, gender, contact, blood, health, bed, ward, photo_path))
+                st.success("✅ Patient added successfully!")
+
+
+    if st.button("⬅ Back", key="back_button"):
+        st.markdown("<style>button[data-baseweb] {background: linear-gradient(135deg, #ff4d6d, #ff7a5c);}</style>", unsafe_allow_html=True)
+        goto("addinfo")
+
+    
+elif st.session_state.page == "view":
+    st.subheader("📋 All Patients")
+    search_col1, search_col2 = st.columns([3, 1])
+    with search_col1:
+        search_roll = st.text_input("Search by Roll Number", placeholder="Enter contact number...")
+    with search_col2:
+            st.markdown("\n")
+            st.markdown("\n")
+            search_clicked = st.button("🔍 Search")
+    rows = get_all_patients()
+
+    if not rows:
+            st.info("No patients found.")
+
+    else:
+
+        if search_clicked and search_roll:
+             rows =[r for r in rows if search_roll in str(r[4]).lower()]
+
+             if not rows:
+                  st.warning("No matching Patients found")
+
+        for r in rows:
+                pid, name, age, gender, contact, blood, health, bed, ward, photo, updated = r
+
+                with st.container():
+                    st.markdown("<div class='card'>", unsafe_allow_html=True)
+
+                    cols = st.columns([1, 4, 1])
+                    with cols[0]:
+                        if photo and Path(photo).exists():
+                            st.image(photo, width=100)
+                        else:
+                            st.image("https://via.placeholder.com/100.png?text=No+Photo")
+
+                    with cols[1]:
+                        st.markdown(f"""
+                        **{name}**  
+                        Age: {age}  
+                        Gender: {gender}  
+                        Contact: {contact}  
+                        Blood Group: {blood}  
+                        Health: {health}  
+                        Bed No: {bed}  
+                        Ward: {ward}  
+                        """)
+                    with cols[2]:
+                        st.markdown("\n")
+                        if st.button("Select", key=f"select_{pid}"):
+                            st.session_state["user_name"] = contact
+                            st.query_params['page'] = "show"
+                            st.rerun()
+                    st.write("---")
+
+    if st.button("⬅ Back"):
+        goto("addinfo")
+
+elif st.session_state.page == "update":
+    st.subheader("✏ Update Patient")
+    #contact = st.number_input("Enter Patient ID", step=1)
+    contact=st.text_input("enter the contact")
+
+    if st.button("Load Details"):
+        row = get_patient_by_id(contact)
+        if row:
+            st.session_state["row"] = row
+        else:
+            st.error("Patient not found.")
+
+    if "row" in st.session_state:
+        r = st.session_state["row"]
+        pid, name, age, gender, contact, blood, health, bed, ward, photo, updated = r
+
+        with st.form("update_form"):
+                name = st.text_input("Name", value=name)
+                age = st.text_input("Age", value=age)
+                gender = st.selectbox("Gender", ["Male", "Female", "Other"], index=["Male","Female","Other"].index(gender))
+                contact = st.text_input("Contact", value=contact)
+                blood = st.text_input("Blood Group", value=blood)
+                health = st.text_area("Health Condition", value=health)
+                bed = st.text_input("Bed No.", value=bed)
+                ward = st.text_input("Ward Name", value=ward)
+                new_photo = st.file_uploader("Replace Photo", type=["jpg", "jpeg", "png"])
+
+                submit = st.form_submit_button("Update")
+
+                if submit:
+                    photo_path = photo
+                    if new_photo:
+                        ext = Path(new_photo.name).suffix
+                        #fname = f"{name}_{int(time.time())}{ext}"
+                        fname = f"{contact}.png"
+                        out = PHOTOS_DIR / fname
+                        with open(out, "wb") as f:
+                            f.write(new_photo.getbuffer())
+                        photo_path = str(out)
+
+                    update_patient(pid, (name, age, gender, contact, blood, health, bed, ward, photo_path))
+                    st.success("✅ Patient updated!")
+
+    if st.button("⬅ Back"):
+        goto("addinfo")
+
+elif st.session_state.page == "remove":
+    st.subheader("🗑 Remove Patient")
+
+    #pid = st.number_input("Enter Patient ID to delete", step=1)
+    contact=st.text_input("enter the contact")
+
+    if st.button("Delete"):
+        rec = get_patient_by_id(contact)
+
+        if rec:
+            pid, name, age, gender, contact, blood, health, bed, ward, photo, updated = rec
+
+            if photo and Path(photo).exists():
+                os.remove(photo)
+
+            remove_patient(pid)
+            st.success("✅ Patient removed.")
+        else:
+            st.error("Patient not found.")
+    if st.button("⬅ Back"):
+        goto("addinfo")
+
 
 # --- Active icon handler ---
 def icon_class(page):
