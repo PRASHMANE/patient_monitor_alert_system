@@ -133,9 +133,11 @@ elif st.session_state.page == "scanner":
     st.title("📷 Scanner")
     st.write("This is your *QR/Camera Scanner* module area.")
 
-elif st.session_state.page == "model":
-    st.title("🤖 AI/ML Model")
-    st.write("This is the *Machine Learning Model* section.")
+elif st.session_state.page == "chatbot":
+    st.title("💬 Chat Bot")
+    user_input = st.text_input("Ask something:")
+    if user_input:
+        st.write(f"🤖 Bot: You said '{user_input}' — reply coming soon!")
 
 # --- Active icon handler ---
 def icon_class(page):
@@ -144,22 +146,14 @@ def icon_class(page):
 home_icon = icon_class("home")
 addinfo_icon = icon_class("addinfo")
 scanner_icon = icon_class("scanner")
-model_icon = icon_class("model")
+chatbot_icon = icon_class("chatbot")
 
 # --- Navbar ---
 st.markdown(f"""
     <div class="bottom-nav">
-        <a href="?page=home" title="Home">
-            <span class="{home_icon}">home</span>
-        </a>
-        <a href="?page=addinfo" title="Add Info">
-            <span class="{addinfo_icon}">note_add</span>
-        </a>
-        <a href="?page=scanner" title="Scanner">
-            <span class="{scanner_icon}">photo_camera</span>
-        </a>
-        <a href="?page=model" title="Model">
-            <span class="{model_icon}">model_training</span>
-        </a>
+        <a href="?page=home" title="Home"><span class="{home_icon}">home</span></a>
+        <a href="?page=addinfo" title="Add Info"><span class="{addinfo_icon}">note_add</span></a>
+        <a href="?page=scanner" title="Scanner"><span class="{scanner_icon}">qr_code_scanner</span></a>
+        <a href="?page=chatbot" title="Chat Bot"><span class="{chatbot_icon}">chat_bubble</span></a>
     </div>
 """, unsafe_allow_html=True)
