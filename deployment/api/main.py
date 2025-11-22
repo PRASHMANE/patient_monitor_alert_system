@@ -12,6 +12,7 @@ import streamlit as st
 from pathlib import Path
 from datetime import datetime
 from add_info import add,add_patient,goto,get_all_patients,get_patient_by_id,update_patient,remove_patient
+from home import home
 from src.models.model import track
 
 
@@ -140,8 +141,9 @@ if "page" in query_params:
 
 # --- Content ---
 if st.session_state.page == "home":
-    st.title("🏠 Home")
-    st.write("Welcome to the *complete dark theme* dashboard 🌑✨")
+    #st.title("🏠 Home")
+    #st.write("Welcome to the *complete dark theme* dashboard 🌑✨")
+    home()
 
 elif st.session_state.page == "addinfo":
     #st.title("📝 Add Info")
